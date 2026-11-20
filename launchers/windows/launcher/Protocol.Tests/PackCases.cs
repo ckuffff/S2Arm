@@ -174,6 +174,11 @@ public static class PackCases
               (string?)ipa["shellDir"] == Path.GetFullPath(paths.Shell) && (int?)ipa["parentPid"] == Environment.ProcessId &&
               (string?)ipa["resources"] == Path.GetFullPath(AppContext.BaseDirectory),
             "request: ipa carries game, library id, bundled shell, bundled resources (fonts) and launcher pid");
+        var pushSelected = PackJobClient.Payload(new(paths, Path.GetTempPath(), Path.GetTempPath(), "lib-id", "pushSelected", "",
+            new Dictionary<string, object?> { ["gameIds"] = new[] { "0100FD70134FA000" }, ["device"] = "test-device" }), "win-push-selected");
+        check((string?)pushSelected["shellDir"] == Path.GetFullPath(paths.Shell) &&
+              (string?)pushSelected["resources"] == Path.GetFullPath(AppContext.BaseDirectory),
+            "request: pushSelected carries the bundled shell and launcher resources");
         // Apple TV 预编壳（安装包带了才有，同 Shell 放在启动器目录）：目录在 → ipa / export 带 tvShellDir；不在 → 不带（作业层 tvos.derive 报安装包没带）
         var tvRoot = Path.Combine(Path.GetTempPath(), "s2a-tvshell-" + Environment.ProcessId);
         try

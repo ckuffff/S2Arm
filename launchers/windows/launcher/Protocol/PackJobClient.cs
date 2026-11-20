@@ -98,8 +98,9 @@ public static class PackJobClient
         };
         if (!string.IsNullOrWhiteSpace(request.GameId)) payload["gameId"] = request.GameId;
         // The bundled iPhone shell is a launcher path setting (Settings → Shell); ipa.bundled_shell reads shellDir.
+        // pushSelected also builds the iPhone program module, so it needs the same bundled shell as ipa.
         // export 的每一步子作业沿用这份请求（pack/jobs/export_plan.py），iPhone 那步要的壳与随包资源一并带上
-        if (request.Operation is "ipa" or "install" or "installUpdate" or "export") payload["shellDir"] = Path.GetFullPath(request.Paths.Shell);
+        if (request.Operation is "ipa" or "install" or "installUpdate" or "export" or "pushSelected") payload["shellDir"] = Path.GetFullPath(request.Paths.Shell);
         // Apple TV 预编壳（启动器目录 Shell-tvOS，安装包带了才有）：tvos.tv_shell / derive 读 tvShellDir，Windows 不能现出壳
         var tvShell = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(request.Paths.Shell)) ?? "", "Shell-tvOS");
         if (request.Operation is "ipa" or "export" && Directory.Exists(tvShell)) payload["tvShellDir"] = tvShell;
@@ -107,7 +108,7 @@ public static class PackJobClient
         // ipa reads the shared fonts from resources/Fonts (core.fonts_dir; without it
         // "shared fonts missing", tianyan 11-07); installCheck / install use the Impactor + plumesign shipped in resources/ThirdParty/Impactor
         // (pack/jobs/impactor.py bundled, 11-07 维护者: no download detour for players).
-        if (request.Operation is "ipa" or "export" or "installCheck" or "install" or "installRemove" or "installRestore" or "installMode" or "installUpdate" or "sgradeScan") payload["resources"] = Path.GetFullPath(AppContext.BaseDirectory);
+        if (request.Operation is "ipa" or "export" or "installCheck" or "install" or "installRemove" or "installRestore" or "installMode" or "installUpdate" or "sgradeScan" or "pushSelected") payload["resources"] = Path.GetFullPath(AppContext.BaseDirectory);
         foreach (var (key, value) in request.Extra ?? new Dictionary<string, object?>())
         {
             if (payload.ContainsKey(key)) throw new ArgumentException("Extra field overrides the request envelope: " + key);
