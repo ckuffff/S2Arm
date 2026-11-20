@@ -221,7 +221,12 @@ def refs_same_volume(source, dest):
     for p in (source, Path(dest).parent):
         root = C.create_unicode_buffer(1024)
         if not getpath(long_path(getattr(os.path.realpath, 'long', os.path.realpath)(p)), root, len(root)):   # 先解开目录联接（入口在系统盘，目标可能在别的盘；作业目录是指到别的卷的联接时，按字面路径判错卷）
-            raise C.WinError(C.get_last_error())
+            error = C.WinError(C.get_last_error())
+            # This is only an optional ReFS-clone probe. Mapped network volumes
+            # can reject GetVolumePathNameW with these errors; use regular copy.
+            if getattr(error, 'winerror', None) in (1005, 144):
+                return False
+            raise error
         roots.append(root.value)
     if os.path.normcase(roots[0]) != os.path.normcase(roots[1]):
         return False
@@ -229,7 +234,12 @@ def refs_same_volume(source, dest):
     getinfo = _api('kernel32', 'GetVolumeInformationW', W.BOOL, W.LPCWSTR,
                   W.LPWSTR, W.DWORD, C.c_void_p, C.c_void_p, C.c_void_p, W.LPWSTR, W.DWORD)
     if not getinfo(roots[0], None, 0, None, None, None, fs, len(fs)):
-        raise C.WinError(C.get_last_error())
+        error = C.WinError(C.get_last_error())
+        # The filesystem query is optional too; unknown mapped volumes use
+        # ordinary copying, while unrelated failures remain visible.
+        if getattr(error, 'winerror', None) in (1005, 144):
+            return False
+        raise error
     return fs.value.upper() == 'REFS'
 
 
